@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}模型详情 - {{ model.version }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="fas fa-robot me-2 text-pink"></i>{{ model.version }}</h4>
+    <a href="{{ url_for('admin.model_records') }}" class="btn btn-outline-secondary">返回列表</a>
+</div>
+<div class="card shadow-sm">
+    <div class="card-body">
+        <table class="table table-borderless">
+            <tr><th>版本</th><td>{{ model.version }}</td></tr>
+            <tr><th>准确率</th><td>{{ '%.2f%%'|format(model.accuracy * 100) if model.accuracy else '-' }}</td></tr>
+            <tr><th>精确率</th><td>{{ '%.4f'|format(model.precision) if model.precision else '-' }}</td></tr>
+            <tr><th>召回率</th><td>{{ '%.4f'|format(model.recall) if model.recall else '-' }}</td></tr>
+            <tr><th>F1分数</th><td>{{ '%.4f'|format(model.f1_score) if model.f1_score else '-' }}</td></tr>
+            <tr><th>对抗鲁棒性</th><td>{{ '%.4f'|format(model.adversarial_robustness) if model.adversarial_robustness else '-' }}</td></tr>
+            <tr><th>训练样本</th><td>{{ model.training_samples or '-' }}</td></tr>
+            <tr><th>模型路径</th><td><code>{{ model.model_path or '-' }}</code></td></tr>
+            <tr><th>状态</th><td>{% if model.is_active %}<span class="badge bg-success">激活中</span>{% else %}<span class="badge bg-secondary">未激活</span>{% endif %}</td></tr>
+            <tr><th>变更说明</th><td>{{ model.change_notes or '-' }}</td></tr>
+            <tr><th>创建时间</th><td>{{ model.created_at.strftime('%Y-%m-%d %H:%M') if model.created_at else '-' }}</td></tr>
+        </table>
+        {% if task %}
+        <h6 class="mt-3">来源训练任务</h6>
+        <p>任务：<a href="{{ url_for('learning.task_detail', task_id=task.id) }}">{{ task.task_name }}</a>（{{ task.status }}）</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

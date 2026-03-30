@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% block title %}训练任务详情 - #{{ task.id }}{% endblock %}
+{% block extra_css %}
+<style>
+#lossChart { max-height: 300px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="fas fa-tasks me-2 text-pink"></i>任务详情：{{ task.task_name }}</h4>
+    <a href="{{ url_for('learning.index') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i>返回
+    </a>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-pink-light fw-bold">任务信息</div>
+            <div class="card-body">
+                <table class="table table-borderless mb-0 small">
+                    <tr><th>任务ID</th><td>#{{ task.id }}</td></tr>
+                    <tr><th>类型</th><td>{{ task.task_type }}</td></tr>
+                    <tr><th>训练轮次</th><td>{{ task.epochs }}</td></tr>
+                    <tr><th>批次大小</th><td>{{ task.batch_size }}</td></tr>
+                    <tr><th>学习率</th><td>{{ task.learning_rate }}</td></tr>
+                    <tr><th>对抗训练</th><td>{{ '启用' if task.adversarial_enabled else '禁用' }}</td></tr>
+                    <tr><th>样本数</th><td>{{ task.sample_count }}</td></tr>
+                    <tr><th>创建时间</th><td>{{ task.created_at.strftime('%Y-%m-%d %H:%M') if task.created_at else '-' }}</td></tr>
+                    <tr><th>完成时间</th><td>{{ task.completed_at.strftime('%Y-%m-%d %H:%M') if task.completed_at else '-' }}</td></tr>
+                    <tr><th>模型版本</th><td>{{ task.model_version or '-' }}</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-pink-light fw-bold">训练进度</div>
+            <div class="card-body d-flex flex-column justify-content-center">
+                <div class="text-center mb-3">
+                    <span class="badge fs-6 {% if task.status=='completed' %}bg-success{% elif task.status=='running' %}bg-primary{% elif task.status=='failed' %}bg-danger{% else %}bg-secondary{% endif %}">
+                        {{ {'pending':'待运行','running':'运行中','completed':'已完成','failed':'失败'}.get(task.status, task.status) }}
+                    </span>
+                </div>
+                <div class="progress mb-2" style="height:20px;">
+                    <div class="progress-bar bg-pink" id="mainProgressBar" style="width:{{ task.progress }}%;">{{ task.progress }}%</div>
+                </div>
+                {% if task.accuracy_before is not none %}
+                <div class="d-flex justify-content-around text-center mt-2">
+                    <div><div class="fw-bold">{{ '%.1f%%'|format(task.accuracy_before * 100) }}</div><small class="text-muted">训练前准确率</small></div>
+                    <div class="text-pink fs-4">→</div>
+                    <div><div class="fw-bold text-success">{{ '%.1f%%'|format(task.accuracy_after * 100) if task.accuracy_after else '-' }}</div><small class="text-muted">训练后准确率</small></div>
+                </div>
+                {% endif %}
+                {% if task.error_message %}
+                <div class="alert alert-danger small mt-2">{{ task.error_message }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loss曲线 -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-pink-light fw-bold"><i class="fas fa-chart-line me-2 text-pink"></i>损失曲线</div>
+    <div class="card-body">
+        <canvas id="lossChart"></canvas>
+        <p class="text-muted small text-center mt-1" id="noDataMsg" style="display:none;">暂无训练数据</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const TASK_ID = {{ task.id }};
+const TASK_STATUS = "{{ task.status }}";
+const INITIAL_LOSS = {{ task.loss_history or '[]' }};
+
+let lossChart = null;
+
+function initChart(lossData) {
+    const ctx = document.getElementById('lossChart').getContext('2d');
+    if (lossData.length === 0) {
+        document.getElementById('noDataMsg').style.display = 'block';
+        return;
+    }
+    lossChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: lossData.map((_, i) => `Epoch ${i+1}`),
+            datasets: [{
+                label: '训练损失',
+                data: lossData,
+                borderColor: '#E91E8C',
+                backgroundColor: 'rgba(233,30,140,0.1)',
+                tension: 0.3,
+                fill: true,
+            }]
+        },
+        options: { responsive: true, scales: { y: { beginAtZero: false } } }
+    });
+}
+
+function updateProgress(data) {
+    document.getElementById('mainProgressBar').style.width = data.progress + '%';
+    document.getElementById('mainProgressBar').textContent = data.progress + '%';
+
+    if (data.loss_history && data.loss_history.length > 0) {
+        document.getElementById('noDataMsg').style.display = 'none';
+        if (!lossChart) {
+            initChart(data.loss_history);
+        } else {
+            lossChart.data.labels = data.loss_history.map((_, i) => `Epoch ${i+1}`);
+            lossChart.data.datasets[0].data = data.loss_history;
+            lossChart.update();
+        }
+    }
+}
+
+initChart(INITIAL_LOSS);
+
+if (TASK_STATUS === 'running' || TASK_STATUS === 'pending') {
+    let failCount = 0;
+    const maxFails = 5;
+    const pollInterval = setInterval(function() {
+        fetch(`/learning/task/${TASK_ID}/progress`)
+            .then(r => r.json())
+            .then(data => {
+                failCount = 0;
+                updateProgress(data);
+                if (data.status === 'completed' || data.status === 'failed') {
+                    clearInterval(pollInterval);
+                    setTimeout(() => location.reload(), 1000);
+                }
+            })
+            .catch(err => {
+                failCount++;
+                console.error('进度查询失败:', err);
+                if (failCount >= maxFails) {
+                    clearInterval(pollInterval);
+                    console.warn('多次查询失败，停止轮询');
+                }
+            });
+    }, 3000);
+}
+</script>
+{% endblock %}

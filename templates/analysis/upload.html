@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block title %}上传伤口图像 - 伤口分析{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-header bg-pink-light">
+                <h4 class="mb-0"><i class="fas fa-upload me-2 text-pink"></i>上传伤口图像</h4>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('analysis.upload') }}" enctype="multipart/form-data" id="analysisForm">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">选择产妇 <span class="text-danger">*</span></label>
+                        <select class="form-select" name="patient_id" required>
+                            <option value="">-- 请选择产妇 --</option>
+                            {% for p in patients %}
+                            <option value="{{ p.id }}">{{ p.name }}（{{ p.age }}岁，{{ '顺产' if p.delivery_method == 'vaginal' else '剖宫产' }}）</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">上传伤口图像 <span class="text-danger">*</span></label>
+                        <div class="upload-area" id="dropZone">
+                            <i class="fas fa-cloud-upload-alt fa-3x text-pink mb-2"></i>
+                            <p class="mb-1">拖拽图像到此处，或点击选择文件</p>
+                            <p class="text-muted small">支持 JPEG / PNG / BMP / WEBP，最大 20MB</p>
+                            <input type="file" class="d-none" name="image" id="imageInput" accept="image/*" required>
+                            <button type="button" class="btn btn-outline-pink btn-sm" onclick="document.getElementById('imageInput').click()">
+                                选择文件
+                            </button>
+                        </div>
+                        <div id="previewContainer" class="mt-2 d-none">
+                            <img id="imagePreview" class="img-fluid rounded" style="max-height:300px;" alt="预览">
+                            <p id="fileName" class="text-muted small mt-1"></p>
+                        </div>
+                    </div>
+
+                    <!-- 上传进度 -->
+                    <div id="uploadProgress" class="d-none mb-3">
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated bg-pink" style="width:0%" id="progressBar"></div>
+                        </div>
+                        <p class="text-muted small mt-1 text-center">正在分析中，请稍候...</p>
+                    </div>
+
+                    <div class="alert alert-info small">
+                        <i class="fas fa-shield-alt me-1"></i>
+                        <strong>隐私保护：</strong>上传的图像仅用于本次医疗分析，系统采用安全加密存储，不会用于其他用途。
+                    </div>
+
+                    <div class="text-end">
+                        <a href="{{ url_for('patient.list_patients') }}" class="btn btn-outline-secondary me-2">返回</a>
+                        <button type="submit" class="btn btn-pink" id="submitBtn">
+                            <i class="fas fa-search me-1"></i>开始分析
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

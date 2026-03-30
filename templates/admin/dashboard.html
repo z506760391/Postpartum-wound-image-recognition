@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block title %}管理后台 - 系统概览{% endblock %}
+{% block content %}
+<h4 class="mb-4"><i class="fas fa-chart-bar me-2 text-pink"></i>系统概览</h4>
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card shadow-sm stat-card text-center">
+            <div class="card-body">
+                <i class="fas fa-users fa-2x text-pink mb-2"></i>
+                <div class="stat-number">{{ total_patients }}</div>
+                <div class="text-muted">注册产妇</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm stat-card text-center">
+            <div class="card-body">
+                <i class="fas fa-microscope fa-2x text-pink mb-2"></i>
+                <div class="stat-number">{{ total_analyses }}</div>
+                <div class="text-muted">分析记录</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm stat-card text-center">
+            <div class="card-body">
+                <i class="fas fa-robot fa-2x text-pink mb-2"></i>
+                <div class="stat-number">{{ total_models }}</div>
+                <div class="text-muted">模型版本</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm stat-card text-center">
+            <div class="card-body">
+                <i class="fas fa-spinner fa-2x text-pink mb-2"></i>
+                <div class="stat-number">{{ pending_tasks }}</div>
+                <div class="text-muted">进行中任务</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-pink-light fw-bold">当前激活模型</div>
+            <div class="card-body">
+                {% if active_model %}
+                <table class="table table-borderless mb-0 small">
+                    <tr><th>版本</th><td>{{ active_model.version }}</td></tr>
+                    <tr><th>准确率</th><td>{{ '%.2f%%'|format(active_model.accuracy * 100) if active_model.accuracy else '-' }}</td></tr>
+                    <tr><th>训练样本</th><td>{{ active_model.training_samples or '-' }}</td></tr>
+                    <tr><th>创建时间</th><td>{{ active_model.created_at.strftime('%Y-%m-%d') if active_model.created_at else '-' }}</td></tr>
+                </table>
+                {% else %}
+                <p class="text-muted">暂无激活模型</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-pink-light fw-bold">快捷操作</div>
+            <div class="card-body d-flex flex-column gap-2">
+                <a href="{{ url_for('admin.model_records') }}" class="btn btn-outline-pink">
+                    <i class="fas fa-robot me-1"></i>管理模型版本
+                </a>
+                <a href="{{ url_for('learning.index') }}" class="btn btn-outline-pink">
+                    <i class="fas fa-brain me-1"></i>学习中心
+                </a>
+                <a href="{{ url_for('patient.register') }}" class="btn btn-outline-pink">
+                    <i class="fas fa-user-plus me-1"></i>注册产妇
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

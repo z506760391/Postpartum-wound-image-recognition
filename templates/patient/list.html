@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block title %}产妇列表{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="fas fa-users me-2 text-pink"></i>产妇列表</h4>
+    <a href="{{ url_for('patient.register') }}" class="btn btn-pink">
+        <i class="fas fa-plus me-1"></i>注册新产妇
+    </a>
+</div>
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body py-2">
+        <form method="GET" class="d-flex gap-2">
+            <input type="text" class="form-control" name="q" value="{{ q }}" placeholder="搜索姓名...">
+            <button type="submit" class="btn btn-outline-pink">搜索</button>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        {% if patients and patients.items %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr><th>姓名</th><th>年龄</th><th>分娩方式</th><th>分娩日期</th><th>情绪</th><th>操作</th></tr>
+                </thead>
+                <tbody>
+                    {% for p in patients.items %}
+                    <tr>
+                        <td>{{ p.name }}</td>
+                        <td>{{ p.age }}</td>
+                        <td>{{ '顺产' if p.delivery_method == 'vaginal' else '剖宫产' }}</td>
+                        <td>{{ p.delivery_date }}</td>
+                        <td><span class="badge bg-secondary">{{ {'stable':'稳定','happy':'愉快','anxious':'焦虑','depressed':'抑郁倾向'}.get(p.emotional_state, '-') }}</span></td>
+                        <td>
+                            <a href="{{ url_for('patient.profile', patient_id=p.id) }}" class="btn btn-sm btn-outline-pink">查看</a>
+                            <a href="{{ url_for('analysis.upload_page') }}?patient_id={{ p.id }}" class="btn btn-sm btn-pink">分析</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if patients.pages > 1 %}
+        <nav>
+            <ul class="pagination justify-content-center">
+                {% for page_num in patients.iter_pages() %}
+                    {% if page_num %}
+                    <li class="page-item {% if page_num == patients.page %}active{% endif %}">
+                        <a class="page-link" href="?page={{ page_num }}&q={{ q }}">{{ page_num }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+        </nav>
+        {% endif %}
+        {% else %}
+        <p class="text-muted text-center py-3"><i class="fas fa-inbox me-2"></i>暂无产妇记录</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

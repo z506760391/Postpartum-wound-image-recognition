@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+{% block title %}学习中心{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="fas fa-brain me-2 text-pink"></i>自适应学习中心</h4>
+    <a href="{{ url_for('learning.upload') }}" class="btn btn-pink">
+        <i class="fas fa-plus me-1"></i>上传标注样本
+    </a>
+</div>
+
+<!-- 统计卡片 -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card shadow-sm text-center stat-card">
+            <div class="card-body">
+                <div class="stat-number text-pink">{{ unlabeled|length }}</div>
+                <div class="text-muted">待标注样本</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm text-center stat-card">
+            <div class="card-body">
+                <div class="stat-number text-pink">{{ tasks|length }}</div>
+                <div class="text-muted">训练任务</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm text-center stat-card">
+            <div class="card-body">
+                <div class="stat-number text-pink">{{ active_model.version if active_model else '无' }}</div>
+                <div class="text-muted">当前激活模型</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 待标注样本 -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-pink-light fw-bold"><i class="fas fa-tags me-2 text-pink"></i>待标注样本</div>
+    <div class="card-body">
+        {% if unlabeled %}
+        <div class="row g-2">
+            {% for s in unlabeled[:12] %}
+            <div class="col-6 col-md-3 col-lg-2">
+                <div class="card">
+                    <div class="card-body p-2 text-center">
+                        <i class="fas fa-image fa-2x text-muted mb-1"></i>
+                        <p class="small mb-1 text-truncate">ID: {{ s.id }}</p>
+                        <p class="small text-muted mb-2">{{ s.wound_stage or '未识别' }}</p>
+                        <button class="btn btn-xs btn-outline-pink w-100" data-bs-toggle="modal" data-bs-target="#labelModal{{ s.id }}">标注</button>
+                    </div>
+                </div>
+                <!-- 标注弹窗 -->
+                <div class="modal fade" id="labelModal{{ s.id }}" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h6 class="modal-title">标注样本 #{{ s.id }}</h6>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <form method="POST" action="{{ url_for('learning.label_sample', analysis_id=s.id) }}">
+                                <div class="modal-body">
+                                    <label class="form-label">确认愈合阶段</label>
+                                    <select class="form-select" name="confirmed_stage" required>
+                                        <option value="inflammation">炎症期</option>
+                                        <option value="proliferation">增生期</option>
+                                        <option value="maturation">成熟期</option>
+                                        <option value="abnormal">异常</option>
+                                    </select>
+                                    <label class="form-label mt-2">备注</label>
+                                    <textarea class="form-control" name="notes" rows="2"></textarea>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                                    <button type="submit" class="btn btn-pink">确认标注</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted text-center py-2"><i class="fas fa-check-circle me-2 text-success"></i>暂无待标注样本</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 创建训练任务 -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-pink-light fw-bold"><i class="fas fa-play me-2 text-pink"></i>创建训练任务</div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('learning.create_task') }}">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">任务名称</label>
+                    <input type="text" class="form-control" name="task_name" placeholder="如：第1轮微调">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">训练轮次</label>
+                    <input type="number" class="form-control" name="epochs" value="10" min="1" max="100">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">批次大小</label>
+                    <input type="number" class="form-control" name="batch_size" value="8" min="1">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">学习率</label>
+                    <input type="number" class="form-control" name="learning_rate" value="0.0001" step="0.00001">
+                </div>
+                <div class="col-12">
+                    <div class="card bg-light">
+                        <div class="card-body py-2">
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" name="adversarial_enabled" id="advSwitch">
+                                <label class="form-check-label fw-semibold" for="advSwitch">启用对抗训练</label>
+                            </div>
+                            <div class="row g-2" id="advConfig" style="display:none;">
+                                <div class="col-md-3">
+                                    <label class="form-label small">Epsilon</label>
+                                    <input type="number" class="form-control form-control-sm" name="epsilon" value="0.03" step="0.01">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">Alpha</label>
+                                    <input type="number" class="form-control form-control-sm" name="alpha" value="0.01" step="0.001">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">PGD步数</label>
+                                    <input type="number" class="form-control form-control-sm" name="steps" value="10" min="1">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">对抗样本比例</label>
+                                    <input type="number" class="form-control form-control-sm" name="adversarial_ratio" value="0.3" step="0.1" min="0" max="1">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-3 text-end">
+                <button type="submit" class="btn btn-pink">
+                    <i class="fas fa-rocket me-1"></i>启动训练
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+document.getElementById('advSwitch').addEventListener('change', function() {
+    document.getElementById('advConfig').style.display = this.checked ? '' : 'none';
+});
+</script>
+
+<!-- 任务列表 -->
+<div class="card shadow-sm">
+    <div class="card-header bg-pink-light fw-bold"><i class="fas fa-list me-2 text-pink"></i>训练任务记录</div>
+    <div class="card-body">
+        {% if tasks %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr><th>任务名</th><th>类型</th><th>状态</th><th>进度</th><th>样本数</th><th>模型版本</th><th>操作</th></tr>
+                </thead>
+                <tbody>
+                    {% for t in tasks %}
+                    <tr>
+                        <td>{{ t.task_name }}</td>
+                        <td>{{ t.task_type }}</td>
+                        <td>
+                            <span class="badge {% if t.status=='completed' %}bg-success{% elif t.status=='running' %}bg-primary{% elif t.status=='failed' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                {{ {'pending':'待运行','running':'运行中','completed':'已完成','failed':'失败'}.get(t.status, t.status) }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="progress" style="height:8px;min-width:80px;">
+                                <div class="progress-bar bg-pink" style="width:{{ t.progress }}%;"></div>
+                            </div>
+                            <small>{{ t.progress }}%</small>
+                        </td>
+                        <td>{{ t.sample_count }}</td>
+                        <td>{{ t.model_version or '-' }}</td>
+                        <td><a href="{{ url_for('learning.task_detail', task_id=t.id) }}" class="btn btn-sm btn-outline-pink">详情</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted text-center py-3">暂无训练任务</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
