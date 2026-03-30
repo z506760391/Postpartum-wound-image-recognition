@@ -56,7 +56,7 @@ function initDropZone() {
         const reader = new FileReader();
         reader.onload = e => {
             if (imagePreview) imagePreview.src = e.target.result;
-            if (fileName) fileName.textContent = `已选择：${file.name}（${(file.size / 1024).toFixed(1)} KB）`;
+            if (fileName) fileName.textContent = `已选择：${file.name}（${file.size >= 1048576 ? (file.size / 1048576).toFixed(1) + ' MB' : (file.size / 1024).toFixed(1) + ' KB'}）`;
             if (previewContainer) previewContainer.classList.remove('d-none');
         };
         reader.readAsDataURL(file);

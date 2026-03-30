@@ -41,7 +41,7 @@ class PatientSchema:
 
         try:
             delivery_date = datetime.strptime(str(data['delivery_date']), '%Y-%m-%d').date()
-            if delivery_date > datetime.today().date():
+            if delivery_date > datetime.utcnow().date():
                 errors.append('分娩日期不能是未来日期')
         except ValueError:
             errors.append('分娩日期格式须为 YYYY-MM-DD')

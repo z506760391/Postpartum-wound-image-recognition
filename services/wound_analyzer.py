@@ -264,7 +264,7 @@ class WoundAnalyzer:
         else:
             return 'low'
     
-    def _calc_days_postpartum(self, delivery_date) -> int | None:
+    def _calc_days_postpartum(self, delivery_date) -> 'Optional[int]':
         """计算产后天数"""
         if not delivery_date:
             return None

@@ -120,17 +120,27 @@ function updateProgress(data) {
 initChart(INITIAL_LOSS);
 
 if (TASK_STATUS === 'running' || TASK_STATUS === 'pending') {
+    let failCount = 0;
+    const maxFails = 5;
     const pollInterval = setInterval(function() {
         fetch(`/learning/task/${TASK_ID}/progress`)
             .then(r => r.json())
             .then(data => {
+                failCount = 0;
                 updateProgress(data);
                 if (data.status === 'completed' || data.status === 'failed') {
                     clearInterval(pollInterval);
                     setTimeout(() => location.reload(), 1000);
                 }
             })
-            .catch(console.error);
+            .catch(err => {
+                failCount++;
+                console.error('进度查询失败:', err);
+                if (failCount >= maxFails) {
+                    clearInterval(pollInterval);
+                    console.warn('多次查询失败，停止轮询');
+                }
+            });
     }, 3000);
 }
 </script>
