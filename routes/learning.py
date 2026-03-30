@@ -97,7 +97,7 @@ def label_sample(analysis_id):
 def create_task():
     try:
         task_config = {
-            'task_name': request.form.get('task_name', '').strip() or None,
+            'task_name': request.form.get('task_name', '').strip(),
             'task_type': request.form.get('task_type', 'fine_tune'),
             'epochs': int(request.form.get('epochs', 10)),
             'batch_size': int(request.form.get('batch_size', 8)),

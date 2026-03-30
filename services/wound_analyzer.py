@@ -11,6 +11,16 @@ from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
+# ─────────────────────────── 感染启发式默认阈值 ────────────────────────────
+# 若 Flask 应用上下文不可用（如单元测试），使用以下默认值
+_DEFAULT_RED_THRESHOLD = 0.15
+_DEFAULT_YG_THRESHOLD = 0.08
+_DEFAULT_SAT_THRESHOLD = 0.20
+_DEFAULT_RISK_THRESHOLD = 0.45
+_DEFAULT_W_RED = 0.40
+_DEFAULT_W_YG = 0.40
+_DEFAULT_W_SAT = 0.20
+
 # 伤口特征关键词映射表（基于百度图像识别标签做语义映射）
 WOUND_FEATURE_KEYWORDS = {
     # 炎症期特征
@@ -81,13 +91,18 @@ class WoundAnalyzer:
             'feature_tags': [],
             'raw_api_result': None,
             'analysis_detail': {},
-            'image_hash': self._compute_image_hash(image_path)
+            'image_hash': self._compute_image_hash(image_path),
+            'infection_risk_score': 0.0,
         }
         
         try:
             # 步骤1: 图像预处理
             processed_image_bytes = self.image_processor.preprocess(image_path)
             logger.info("图像预处理完成")
+
+            # 步骤1b: 本地感染风险启发式评分（不依赖外部服务）
+            infection_risk_score = self._compute_infection_risk_score(image_path)
+            result['infection_risk_score'] = infection_risk_score
             
             # 步骤2: 调用百度图像分类API
             classify_result = self.baidu_ai.general_image_classify(image_bytes=processed_image_bytes)
@@ -104,6 +119,11 @@ class WoundAnalyzer:
             # 步骤3: 特征语义解析
             stage_scores = self._parse_stage_from_tags(api_tags)
             anomalies = self._detect_anomalies(api_tags)
+
+            # 步骤3b: 融合本地感染风险评分
+            anomalies, infection_risk_score = self._merge_infection_risk(
+                anomalies, infection_risk_score
+            )
             
             # 步骤4: 结合患者信息综合评估
             final_stage, confidence = self._integrate_patient_context(
@@ -120,10 +140,15 @@ class WoundAnalyzer:
                 'anomaly_detected': len(anomalies) > 0,
                 'anomaly_types': anomalies,
                 'urgency_level': urgency,
+                'infection_risk_score': infection_risk_score,
                 'analysis_detail': {
                     'stage_scores': stage_scores,
                     'days_postpartum': self._calc_days_postpartum(patient_info.get('delivery_date')),
-                    'risk_factors': self._assess_risk_factors(patient_info)
+                    'risk_factors': self._assess_risk_factors(patient_info),
+                    'infection_risk_note': (
+                        '感染风险评分为辅助参考，不能替代医生诊断。'
+                        '如有疑虑请及时就医。'
+                    )
                 }
             })
             
@@ -297,7 +322,108 @@ class WoundAnalyzer:
         
         return risks
     
-    def _compute_image_hash(self, image_path: str) -> str:
+    def _merge_infection_risk(self, anomalies: list, infection_risk_score: float) -> tuple:
+        """
+        将本地颜色启发式感染评分融入异常类型列表。
+
+        当 infection_risk_score 超过配置阈值时，若尚未标记 infection 则自动添加，
+        并将评分上调（确保后续 urgency 判断能感知）。
+
+        注意：感染风险评分为辅助建议，不能替代医生诊断。
+
+        Returns:
+            (anomalies, infection_risk_score) 更新后的元组
+        """
+        try:
+            cfg = current_app.config
+            threshold = cfg.get('INFECTION_RISK_SCORE_THRESHOLD', _DEFAULT_RISK_THRESHOLD)
+        except RuntimeError:
+            threshold = _DEFAULT_RISK_THRESHOLD
+
+        if infection_risk_score >= threshold and 'infection' not in anomalies:
+            anomalies = list(anomalies) + ['infection']
+            logger.info(
+                f"本地感染风险评分 {infection_risk_score:.3f} ≥ 阈值 {threshold:.3f}，"
+                "已标记 infection 异常（辅助参考，请医生确认）"
+            )
+        return anomalies, infection_risk_score
+
+
+        """
+        本地感染风险启发式评分（基于颜色特征，无需网络）。
+
+        评估依据：
+        - 红色区域（H∈[0,15]∪[160,180]）比例 → 炎症/充血
+        - 黄绿色区域（H∈[25,85]，高饱和）比例 → 渗出/脓液
+        - 全图高饱和（S>150）像素比例 → 异常局部特征
+
+        Returns:
+            float: 感染风险评分，范围 [0, 1]；
+                   值越大表示感染风险越高。
+            注意：本评分为辅助参考，不能替代医生诊断。
+        """
+        try:
+            import cv2
+
+            img_bgr = cv2.imread(image_path)
+            if img_bgr is None:
+                logger.warning(f"感染风险评估：无法读取图像 {image_path}")
+                return 0.0
+
+            img_hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
+            total_pixels = img_hsv.shape[0] * img_hsv.shape[1]
+            if total_pixels == 0:
+                return 0.0
+
+            h, s, v = img_hsv[:, :, 0], img_hsv[:, :, 1], img_hsv[:, :, 2]
+
+            # ── 红色区域（H ∈ [0,15] 或 [160,180]）──
+            red_mask = ((h <= 15) | (h >= 160)) & (s > 80) & (v > 60)
+            red_ratio = float(np.count_nonzero(red_mask)) / total_pixels
+
+            # ── 黄绿色（化脓）区域（H ∈ [25,85]，高饱和）──
+            yg_mask = ((h >= 25) & (h <= 85)) & (s > 100) & (v > 60)
+            yg_ratio = float(np.count_nonzero(yg_mask)) / total_pixels
+
+            # ── 全图高饱和区域（S > 150）──
+            sat_mask = s > 150
+            sat_ratio = float(np.count_nonzero(sat_mask)) / total_pixels
+
+            # 读取配置阈值（Flask 上下文不可用时使用默认值）
+            try:
+                cfg = current_app.config
+                w_red = cfg.get('INFECTION_WEIGHT_RED', _DEFAULT_W_RED)
+                w_yg = cfg.get('INFECTION_WEIGHT_YELLOW_GREEN', _DEFAULT_W_YG)
+                w_sat = cfg.get('INFECTION_WEIGHT_HIGH_SATURATION', _DEFAULT_W_SAT)
+                red_thr = cfg.get('INFECTION_RED_RATIO_THRESHOLD', _DEFAULT_RED_THRESHOLD)
+                yg_thr = cfg.get('INFECTION_YELLOW_GREEN_RATIO_THRESHOLD', _DEFAULT_YG_THRESHOLD)
+                sat_thr = cfg.get('INFECTION_HIGH_SATURATION_THRESHOLD', _DEFAULT_SAT_THRESHOLD)
+            except RuntimeError:
+                w_red, w_yg, w_sat = _DEFAULT_W_RED, _DEFAULT_W_YG, _DEFAULT_W_SAT
+                red_thr, yg_thr, sat_thr = _DEFAULT_RED_THRESHOLD, _DEFAULT_YG_THRESHOLD, _DEFAULT_SAT_THRESHOLD
+
+            # 各分量归一化得分（超过阈值即满分；低于阈值线性缩放）
+            score_red = min(red_ratio / max(red_thr, 1e-6), 1.0)
+            score_yg = min(yg_ratio / max(yg_thr, 1e-6), 1.0)
+            score_sat = min(sat_ratio / max(sat_thr, 1e-6), 1.0)
+
+            infection_risk = w_red * score_red + w_yg * score_yg + w_sat * score_sat
+            infection_risk = min(round(infection_risk, 3), 1.0)
+
+            logger.debug(
+                f"感染风险评估: red={red_ratio:.3f}, yg={yg_ratio:.3f}, "
+                f"sat={sat_ratio:.3f} → risk={infection_risk:.3f}"
+            )
+            return infection_risk
+
+        except ImportError:
+            logger.info("opencv-python 未安装，跳过本地感染风险评估")
+            return 0.0
+        except Exception as e:
+            logger.warning(f"感染风险评估失败: {e}")
+            return 0.0
+
+
         """计算图像MD5哈希"""
         try:
             with open(image_path, 'rb') as f:
@@ -308,14 +434,27 @@ class WoundAnalyzer:
     def _fallback_analysis(self, image_path: str, patient_info: dict, base_result: dict) -> dict:
         """百度API不可用时的降级分析（基于产后天数推断）"""
         days = self._calc_days_postpartum(patient_info.get('delivery_date'))
-        
+
+        # 本地感染风险仍可计算
+        infection_risk_score = self._compute_infection_risk_score(image_path)
+        anomalies = []
+        anomalies, infection_risk_score = self._merge_infection_risk(anomalies, infection_risk_score)
+        base_result['infection_risk_score'] = infection_risk_score
+        if anomalies:
+            base_result['anomaly_detected'] = True
+            base_result['anomaly_types'] = anomalies
+
         if days is None:
             base_result.update({
                 'success': True,
                 'wound_stage': 'inflammation',
                 'confidence_score': 0.4,
                 'urgency_level': 'normal',
-                'analysis_detail': {'fallback': True, 'reason': 'API不可用，使用规则推断'}
+                'analysis_detail': {
+                    'fallback': True,
+                    'reason': 'API不可用，使用规则推断',
+                    'infection_risk_note': '感染风险评分为辅助参考，不能替代医生诊断。如有疑虑请及时就医。'
+                }
             })
         elif days <= 5:
             base_result.update({'wound_stage': 'inflammation', 'confidence_score': 0.65})
@@ -323,8 +462,11 @@ class WoundAnalyzer:
             base_result.update({'wound_stage': 'proliferation', 'confidence_score': 0.65})
         else:
             base_result.update({'wound_stage': 'maturation', 'confidence_score': 0.65})
-        
+
         base_result['success'] = True
-        base_result['analysis_detail'] = base_result.get('analysis_detail', {})
+        base_result.setdefault('analysis_detail', {})
         base_result['analysis_detail']['fallback'] = True
+        if anomalies:
+            urgency = self._determine_urgency(anomalies, base_result.get('wound_stage', 'inflammation'), patient_info)
+            base_result['urgency_level'] = urgency
         return base_result
