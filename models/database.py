@@ -2,6 +2,7 @@
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 import json
+import uuid
 
 db = SQLAlchemy()
 
@@ -98,7 +99,11 @@ class LearningTask(db.Model):
     __tablename__ = 'learning_tasks'
     
     id = db.Column(db.Integer, primary_key=True)
-    task_name = db.Column(db.String(100), nullable=False, comment='任务名称')
+    task_name = db.Column(
+        db.String(100), nullable=False,
+        default=lambda: f'Task-{uuid.uuid4().hex[:8]}',
+        comment='任务名称'
+    )
     task_type = db.Column(db.String(30), default='fine_tune', comment='任务类型: fine_tune/adversarial/full_retrain')
     
     # 训练配置

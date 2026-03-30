@@ -87,6 +87,10 @@ class AdaptiveLearningService:
         """
         from models.database import db, LearningTask
         try:
+            raw_name = task_config.get('task_name') or ''
+            task_name = raw_name.strip() if raw_name else ''
+            if not task_name:
+                task_name = f'Adaptive_{datetime.now().strftime("%Y%m%d_%H%M%S")}'
             adv_config = {
                 'epsilon': task_config.get('epsilon', 0.03),
                 'alpha': task_config.get('alpha', 0.01),
@@ -94,7 +98,7 @@ class AdaptiveLearningService:
                 'adversarial_ratio': task_config.get('adversarial_ratio', 0.3),
             }
             task = LearningTask(
-                task_name=task_config.get('task_name', f'训练任务_{datetime.now().strftime("%Y%m%d%H%M%S")}'),
+                task_name=task_name,
                 task_type=task_config.get('task_type', 'fine_tune'),
                 batch_size=task_config.get('batch_size', 8),
                 epochs=task_config.get('epochs', 10),
