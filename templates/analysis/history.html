@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}历史分析记录{% endblock %}
+{% block content %}
+<h4 class="mb-3"><i class="fas fa-history me-2 text-pink"></i>{{ patient.name }} 的历史分析</h4>
+{% if analyses %}
+<div class="row g-3">
+    {% for a in analyses %}
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <span class="badge stage-badge-{{ a.wound_stage }}">{{ {'inflammation':'炎症期','proliferation':'增生期','maturation':'成熟期','abnormal':'异常'}.get(a.wound_stage, a.wound_stage) }}</span>
+                    <small class="text-muted">{{ a.created_at.strftime('%Y-%m-%d %H:%M') if a.created_at else '' }}</small>
+                </div>
+                <p class="mb-1 mt-2 small">置信度：{{ '%.1f%%'|format(a.confidence_score * 100) if a.confidence_score else '-' }}</p>
+                <a href="{{ url_for('analysis.result', analysis_id=a.id) }}" class="btn btn-sm btn-outline-pink">查看详情</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<p class="text-muted text-center py-5"><i class="fas fa-inbox fa-2x mb-2"></i><br>暂无历史记录</p>
+{% endif %}
+{% endblock %}

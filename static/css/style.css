@@ -1,0 +1,188 @@
+/* ============================================================
+   产后伤口智能护理系统 - 主样式表
+   粉色主题 + 响应式设计
+   ============================================================ */
+
+:root {
+    --pink-primary: #F8B4C8;
+    --pink-accent: #E91E8C;
+    --pink-dark: #C2185B;
+    --pink-light: #FFF0F5;
+    --pink-medium: #FFD6E7;
+    --bg-color: #FFF0F5;
+}
+
+body {
+    background-color: var(--bg-color);
+    font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+/* ---- 导航栏 ---- */
+.navbar-custom {
+    background: linear-gradient(135deg, var(--pink-accent), var(--pink-dark));
+    box-shadow: 0 2px 8px rgba(233, 30, 140, 0.3);
+}
+
+.navbar-custom .navbar-brand,
+.navbar-custom .nav-link {
+    color: #fff !important;
+    font-weight: 500;
+    transition: opacity 0.2s;
+}
+
+.navbar-custom .nav-link:hover {
+    opacity: 0.8;
+}
+
+.navbar-custom .navbar-toggler {
+    border-color: rgba(255,255,255,0.5);
+}
+
+/* ---- 按钮 ---- */
+.btn-pink {
+    background: linear-gradient(135deg, var(--pink-accent), var(--pink-dark));
+    color: #fff;
+    border: none;
+    transition: opacity 0.2s, transform 0.1s;
+}
+
+.btn-pink:hover {
+    color: #fff;
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.btn-outline-pink {
+    border: 1.5px solid var(--pink-accent);
+    color: var(--pink-accent);
+    background: transparent;
+    transition: all 0.2s;
+}
+
+.btn-outline-pink:hover {
+    background: var(--pink-accent);
+    color: #fff;
+}
+
+.btn-xs {
+    padding: 0.15rem 0.4rem;
+    font-size: 0.75rem;
+}
+
+/* ---- 通用颜色工具类 ---- */
+.text-pink { color: var(--pink-accent) !important; }
+.bg-pink { background-color: var(--pink-accent) !important; }
+.bg-pink-light { background-color: var(--pink-medium) !important; }
+
+/* ---- 卡片 ---- */
+.card {
+    border: none;
+    border-radius: 12px;
+}
+
+.card-header {
+    border-radius: 12px 12px 0 0 !important;
+}
+
+.feature-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid #f0d0e0;
+}
+
+.feature-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(233, 30, 140, 0.15) !important;
+}
+
+.stat-card {
+    border: 1px solid #f0d0e0;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+/* ---- 人文关怀区域 ---- */
+.humancare-card {
+    border: 2px solid var(--pink-primary);
+}
+
+.humancare-text {
+    font-size: 0.95rem;
+    line-height: 1.8;
+    color: #555;
+}
+
+/* ---- 伤口阶段徽章 ---- */
+.stage-badge-inflammation { background-color: #FF6B6B; color: #fff; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; }
+.stage-badge-proliferation { background-color: #FFD93D; color: #333; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; }
+.stage-badge-maturation { background-color: #6BCB77; color: #fff; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; }
+.stage-badge-abnormal { background-color: #FF0000; color: #fff; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; }
+
+/* ---- 紧急程度徽章 ---- */
+.urgency-emergency { background-color: #FF0000; color: #fff; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; }
+.urgency-high { background-color: #FF7043; color: #fff; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; }
+.urgency-normal { background-color: #42A5F5; color: #fff; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; }
+.urgency-low { background-color: #66BB6A; color: #fff; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; }
+
+/* ---- 紧急横幅动画 ---- */
+.emergency-banner {
+    animation: emergencyPulse 1.5s infinite;
+}
+
+@keyframes emergencyPulse {
+    0%, 100% { background-color: #f8d7da; }
+    50% { background-color: #f5c6cb; border-color: #FF0000; }
+}
+
+@keyframes blink {
+    50% { opacity: 0; }
+}
+
+/* ---- 上传拖拽区域 ---- */
+.upload-area {
+    border: 2px dashed var(--pink-primary);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    background: var(--pink-light);
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.upload-area:hover,
+.upload-area.drag-over {
+    border-color: var(--pink-accent);
+    background: var(--pink-medium);
+}
+
+/* ---- 进度条 ---- */
+.progress-bar.bg-pink {
+    background: linear-gradient(90deg, var(--pink-primary), var(--pink-accent)) !important;
+}
+
+/* ---- 页脚 ---- */
+.footer {
+    background: var(--pink-medium);
+    border-top: 1px solid var(--pink-primary);
+}
+
+/* ---- 响应式 ---- */
+@media (max-width: 576px) {
+    .stat-number { font-size: 1.5rem; }
+    .feature-card .card-body { padding: 1rem; }
+}
+
+/* ---- 打印样式 ---- */
+@media print {
+    .navbar, .footer, .btn, .alert { display: none !important; }
+    .card { box-shadow: none !important; border: 1px solid #ddd !important; }
+}

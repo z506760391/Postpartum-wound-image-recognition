@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% block title %}分析结果 - 伤口评估{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="fas fa-chart-line me-2 text-pink"></i>伤口分析结果</h4>
+    <div>
+        <a href="{{ url_for('patient.profile', patient_id=patient.id) }}" class="btn btn-outline-secondary me-2">
+            <i class="fas fa-arrow-left me-1"></i>返回档案
+        </a>
+        <button onclick="window.print()" class="btn btn-outline-pink">
+            <i class="fas fa-print me-1"></i>打印报告
+        </button>
+    </div>
+</div>
+
+<!-- 愈合阶段卡片 -->
+{% set stage_config = {
+    'inflammation': {'name':'炎症期','color':'#FF6B6B','bg':'#FFF0F0','icon':'fas fa-fire'},
+    'proliferation': {'name':'增生期','color':'#FFD93D','bg':'#FFFBF0','icon':'fas fa-seedling'},
+    'maturation': {'name':'成熟期','color':'#6BCB77','bg':'#F0FFF4','icon':'fas fa-leaf'},
+    'abnormal': {'name':'异常状态','color':'#FF0000','bg':'#FFF0F0','icon':'fas fa-exclamation-triangle'}
+} %}
+{% set sc = stage_config.get(record.wound_stage, stage_config['inflammation']) %}
+
+<div class="card shadow-sm mb-4" style="border-left: 5px solid {{ sc.color }}; background: {{ sc.bg }};">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <i class="{{ sc.icon }} fa-3x" style="color:{{ sc.color }};{% if record.wound_stage == 'abnormal' %} animation: blink 1s step-start infinite;{% endif %}"></i>
+            </div>
+            <div class="col">
+                <h4 class="mb-1" style="color:{{ sc.color }};">{{ sc.name }}</h4>
+                <p class="mb-2 text-muted">产妇：{{ patient.name }} &nbsp;|&nbsp; 分析时间：{{ record.created_at.strftime('%Y-%m-%d %H:%M') if record.created_at else '' }}</p>
+                <div class="d-flex align-items-center">
+                    <span class="me-2 fw-semibold">识别置信度：</span>
+                    <div class="progress flex-grow-1" style="height:12px; max-width:200px;">
+                        <div class="progress-bar" style="width:{{ '%.0f'|format(record.confidence_score * 100) if record.confidence_score else 0 }}%; background:{{ sc.color }};">
+                        </div>
+                    </div>
+                    <span class="ms-2">{{ '%.1f%%'|format(record.confidence_score * 100) if record.confidence_score else '0%' }}</span>
+                </div>
+            </div>
+            <div class="col-auto">
+                <span class="badge urgency-{{ record.urgency_level }} fs-6">
+                    {% if record.urgency_level == 'emergency' %}🚨 紧急
+                    {% elif record.urgency_level == 'high' %}⚠️ 较高
+                    {% elif record.urgency_level == 'normal' %}正常
+                    {% else %}低 {% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 异常警告 -->
+{% if record.anomaly_detected %}
+<div class="alert alert-danger {% if record.urgency_level == 'emergency' %}emergency-banner{% endif %} mb-4">
+    <h5><i class="fas fa-exclamation-circle me-2"></i>检测到异常</h5>
+    <ul class="mb-0">
+        {% for a in anomaly_types %}
+        <li>{{ {'infection':'伤口感染','dehiscence':'伤口裂开','hematoma':'血肿','seroma':'血清肿','necrosis':'组织坏死','excessive_discharge':'异常分泌物','bleeding':'出血'}.get(a, a) }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<!-- 护理指导 -->
+{% if care_guidance %}
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-pink-light fw-bold"><i class="fas fa-hand-holding-medical me-2 text-pink"></i>基础护理</div>
+            <ul class="list-group list-group-flush">
+                {% for item in care_guidance.get('basic_care', []) %}
+                <li class="list-group-item small">{{ item }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-pink-light fw-bold"><i class="fas fa-utensils me-2 text-pink"></i>饮食建议</div>
+            <ul class="list-group list-group-flush">
+                {% for item in care_guidance.get('diet_advice', []) %}
+                <li class="list-group-item small">{{ item }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-danger text-white fw-bold"><i class="fas fa-bell me-2"></i>警示信号</div>
+            <ul class="list-group list-group-flush">
+                {% for item in care_guidance.get('alert_signs', []) %}
+                <li class="list-group-item small">{{ item }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-info text-white fw-bold"><i class="fas fa-calendar-check me-2"></i>随访计划</div>
+            <ul class="list-group list-group-flush">
+                {% for item in care_guidance.get('follow_up_schedule', []) %}
+                <li class="list-group-item small"><strong>{{ item.time }}：</strong>{{ item.action }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- 人文关怀 -->
+{% if record.humancare_message %}
+<div class="card shadow-sm humancare-card mb-4">
+    <div class="card-header fw-bold" style="background:#FFE4F0;">
+        <i class="fas fa-heart me-2 text-pink"></i>人文关怀
+    </div>
+    <div class="card-body">
+        <p class="humancare-text mb-0" style="white-space:pre-line;">{{ record.humancare_message }}</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}首页 - 产后伤口智能护理系统{% endblock %}
+{% block content %}
+<div class="text-center mb-5">
+    <h1 class="display-5 fw-bold text-pink mt-3">
+        <i class="fas fa-heart-pulse me-2"></i>产后伤口智能护理系统
+    </h1>
+    <p class="lead text-muted">基于AI的产后伤口识别与个性化护理指导平台，守护每一位妈妈的健康</p>
+</div>
+
+<div class="row g-4 justify-content-center">
+    <div class="col-md-6 col-lg-3">
+        <div class="card feature-card h-100 text-center shadow-sm">
+            <div class="card-body py-4">
+                <div class="feature-icon mb-3">
+                    <i class="fas fa-users fa-2x text-pink"></i>
+                </div>
+                <h5 class="card-title fw-bold">产妇管理</h5>
+                <p class="card-text text-muted">注册产妇信息，管理个人健康档案，追踪产后恢复情况</p>
+                <a href="{{ url_for('patient.register') }}" class="btn btn-pink mt-2">
+                    <i class="fas fa-plus me-1"></i>注册产妇
+                </a>
+                <a href="{{ url_for('patient.list_patients') }}" class="btn btn-outline-pink mt-2 ms-2">
+                    查看列表
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+        <div class="card feature-card h-100 text-center shadow-sm">
+            <div class="card-body py-4">
+                <div class="feature-icon mb-3">
+                    <i class="fas fa-microscope fa-2x text-pink"></i>
+                </div>
+                <h5 class="card-title fw-bold">伤口分析</h5>
+                <p class="card-text text-muted">上传伤口图像，AI智能识别愈合阶段，生成个性化护理指导</p>
+                <a href="{{ url_for('analysis.upload_page') }}" class="btn btn-pink mt-2">
+                    <i class="fas fa-upload me-1"></i>开始分析
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+        <div class="card feature-card h-100 text-center shadow-sm">
+            <div class="card-body py-4">
+                <div class="feature-icon mb-3">
+                    <i class="fas fa-brain fa-2x text-pink"></i>
+                </div>
+                <h5 class="card-title fw-bold">学习中心</h5>
+                <p class="card-text text-muted">医生标注样本，触发自适应学习训练，持续提升识别精度</p>
+                <a href="{{ url_for('learning.index') }}" class="btn btn-pink mt-2">
+                    <i class="fas fa-graduation-cap me-1"></i>进入学习
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+        <div class="card feature-card h-100 text-center shadow-sm">
+            <div class="card-body py-4">
+                <div class="feature-icon mb-3">
+                    <i class="fas fa-cog fa-2x text-pink"></i>
+                </div>
+                <h5 class="card-title fw-bold">管理后台</h5>
+                <p class="card-text text-muted">查看系统统计数据，管理AI模型版本，监控训练任务</p>
+                <a href="{{ url_for('admin.dashboard') }}" class="btn btn-pink mt-2">
+                    <i class="fas fa-chart-bar me-1"></i>进入后台
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

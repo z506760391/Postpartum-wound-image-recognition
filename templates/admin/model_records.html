@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block title %}模型版本管理{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="fas fa-robot me-2 text-pink"></i>模型版本管理</h4>
+    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i>返回
+    </a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        {% if models %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>版本号</th>
+                        <th>准确率</th>
+                        <th>F1分数</th>
+                        <th>对抗鲁棒性</th>
+                        <th>训练样本</th>
+                        <th>状态</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in models %}
+                    <tr class="{% if m.is_active %}table-success{% endif %}">
+                        <td><strong>{{ m.version }}</strong></td>
+                        <td>{{ '%.2f%%'|format(m.accuracy * 100) if m.accuracy else '-' }}</td>
+                        <td>{{ '%.4f'|format(m.f1_score) if m.f1_score else '-' }}</td>
+                        <td>{{ '%.4f'|format(m.adversarial_robustness) if m.adversarial_robustness else '-' }}</td>
+                        <td>{{ m.training_samples or '-' }}</td>
+                        <td>
+                            {% if m.is_active %}
+                            <span class="badge bg-success"><i class="fas fa-check me-1"></i>激活中</span>
+                            {% else %}
+                            <span class="badge bg-secondary">未激活</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ m.created_at.strftime('%Y-%m-%d') if m.created_at else '-' }}</td>
+                        <td>
+                            <a href="{{ url_for('admin.model_detail', version=m.version) }}" class="btn btn-sm btn-outline-pink me-1">详情</a>
+                            {% if not m.is_active %}
+                            <form method="POST" action="{{ url_for('admin.activate_model', version=m.version) }}" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-pink"
+                                    onclick="return confirm('确认激活模型 {{ m.version }}？')">激活</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted text-center py-4"><i class="fas fa-inbox fa-2x mb-2"></i><br>暂无模型记录</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

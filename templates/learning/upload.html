@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}上传标注样本{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-pink-light">
+                <h5 class="mb-0"><i class="fas fa-tag me-2 text-pink"></i>上传标注样本</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('learning.upload') }}" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">选择产妇</label>
+                        <select class="form-select" name="patient_id" required>
+                            <option value="">-- 请选择 --</option>
+                            {% for p in patients %}
+                            <option value="{{ p.id }}">{{ p.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">伤口愈合阶段标签</label>
+                        <select class="form-select" name="wound_stage" required>
+                            <option value="inflammation">炎症期</option>
+                            <option value="proliferation">增生期</option>
+                            <option value="maturation">成熟期</option>
+                            <option value="abnormal">异常</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">上传图像</label>
+                        <input type="file" class="form-control" name="image" accept="image/*" required>
+                    </div>
+                    <div class="text-end">
+                        <a href="{{ url_for('learning.index') }}" class="btn btn-outline-secondary me-2">取消</a>
+                        <button type="submit" class="btn btn-pink">
+                            <i class="fas fa-upload me-1"></i>上传标注
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
