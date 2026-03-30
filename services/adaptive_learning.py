@@ -1,4 +1,5 @@
 import json
+import os
 import threading
 from datetime import datetime
 from utils.logger import get_logger
@@ -232,7 +233,6 @@ class AdaptiveLearningService:
                 logger.info(f"任务{task_id} Epoch {epoch+1}/{total_epochs}, Loss={avg_loss:.4f}")
 
             # 保存模型权重
-            import os
             from flask import current_app as _app
             save_dir = app.config.get('MODEL_SAVE_PATH', 'model_weights') if app else 'model_weights'
             os.makedirs(save_dir, exist_ok=True)
